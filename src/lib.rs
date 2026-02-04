@@ -47,3 +47,51 @@ where
         flatten(self)
     }
 }
+
+impl<O> Iterator for Flatten<O>
+where
+    O: Iterator,
+    O::Item: IntoIterator,
+{
+    type Item = <O::Item as IntoIterator>::Item;
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(front_iter) = &mut self.front_iter {
+                if let Some(i) = front_iter.next() {
+                    return Some(i);
+                }
+                self.front_iter = None;
+            }
+
+            if let Some(next_outer) = self.outer.next() {
+                self.front_iter = Some(next_outer.into_iter());
+            } else {
+                self.back_iter.as_mut()?.next();
+            }
+        }
+    }
+}
+
+impl<O> DoubleEndedIterator for Flatten<O>
+where
+    O: DoubleEndedIterator,
+    O::Item: IntoIterator,
+    <O::Item as IntoIterator>::IntoIter: DoubleEndedIterator,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        loop {
+            if let Some(back_iter) = &mut self.back_iter {
+                if let Some(i) = back_iter.next_back() {
+                    return Some(i);
+                }
+            }
+            self.back_iter = None;
+
+            if let Some(next_back_outer) = self.outer.next_back() {
+                self.back_iter = Some(next_back_outer.into_iter())
+            } else {
+                self.front_iter.as_mut()?.next_back();
+            }
+        }
+    }
+}
