@@ -66,7 +66,7 @@ where
             if let Some(next_outer) = self.outer.next() {
                 self.front_iter = Some(next_outer.into_iter());
             } else {
-                self.back_iter.as_mut()?.next();
+                return self.back_iter.as_mut()?.next();
             }
         }
     }
@@ -90,8 +90,73 @@ where
             if let Some(next_back_outer) = self.outer.next_back() {
                 self.back_iter = Some(next_back_outer.into_iter())
             } else {
-                self.front_iter.as_mut()?.next_back();
+                return self.front_iter.as_mut()?.next_back();
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn empty() {
+        assert_eq!(flatten(std::iter::empty::<Vec<()>>()).count(), 0)
+    }
+
+    #[test]
+    fn empty_wide() {
+        assert_eq!(flatten(vec![Vec::<()>::new(), vec![], vec![]]).count(), 0)
+    }
+
+    #[test]
+    fn once() {
+        assert_eq!(flatten(std::iter::once(vec!["a"])).count(), 1)
+    }
+
+    #[test]
+    fn two() {
+        assert_eq!(flatten(std::iter::once(vec!["a", "b"])).count(), 2);
+    }
+
+    #[test]
+    fn two_wide() {
+        assert_eq!(flatten(vec![vec!["a"], vec!["b"]]).count(), 2);
+    }
+
+    #[test]
+    fn reverse() {
+        assert_eq!(
+            flatten(std::iter::once(vec!["a", "b"]))
+                .rev()
+                .collect::<Vec<_>>(),
+            vec!["b", "a"]
+        )
+    }
+    #[test]
+    fn reverse_wide() {
+        assert_eq!(
+            flatten(vec![vec!["a",], vec!["b"]])
+                .rev()
+                .collect::<Vec<_>>(),
+            vec!["b", "a"]
+        )
+    }
+
+    #[test]
+    fn both_ends() {
+        let mut iter = flatten(vec![vec!["a", "b", "c"], vec!["d", "e", "f"]]);
+        assert_eq!(iter.next(), Some("a"));
+        assert_eq!(iter.next(), Some("b"));
+        assert_eq!(iter.next_back(), Some("f"));
+        assert_eq!(iter.next(), Some("c"));
+        assert_eq!(iter.next_back(), Some("e"));
+        assert_eq!(iter.next_back(), Some("d"));
+    }
+
+    #[test]
+    fn ext() {
+        assert_eq!(vec![vec!["a", "b"]].into_iter().our_flatten().count(), 2);
     }
 }
